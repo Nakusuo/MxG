@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Para ti ♡</title>
+<meta name="description" content="Un pequeño lugar hecho a mano.">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&family=Gloria+Hallelujah&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=18">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23e87cac'/><circle cx='50' cy='50' r='16' fill='%234a2331'/></svg>">
+</head>
+<body>
+
+<div class="ground" aria-hidden="true"></div>
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ============ PANTALLA 1 · EL RAMO ============ -->
+<section class="screen is-active" id="screen-intro" aria-label="El ramo">
+  <button class="skip" id="skip-btn" type="button">saltar la animación</button>
+
+  <header class="intro-top">
+    <h1 class="title" id="title">Para ti <span class="heart">♡</span></h1>
+  </header>
+
+  <div class="stage" id="stage" aria-hidden="true">
+    <svg id="bouquet" viewBox="0 0 1000 1040" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Un ramo de flores">
+      <defs id="bq-defs"></defs>
+      <g id="bq-back"></g>
+      <g id="bq-front"></g>
+      <g id="bq-wrap"></g>
+    </svg>
+  </div>
+
+  <div class="intro-bottom">
+    <button class="invite" id="invite" type="button" aria-expanded="false" aria-controls="options">
+      <span class="invite-text">¿Cómo quieres continuar?</span>
+      <span class="invite-arrow" aria-hidden="true">▾</span>
+    </button>
+    <div class="options-wrap" id="options-wrap">
+    <nav class="options" id="options" aria-label="Opciones">
+      <button class="opt" type="button" data-go="screen-carta" style="--tilt:-1.6deg">
+        <span class="opt-emoji">🌻</span>
+        <span class="opt-text">Tengo algo para ti</span>
+        <span class="opt-sub">una carta</span>
+      </button>
+      <button class="opt" type="button" data-go="screen-recuerdos" style="--tilt:1.2deg">
+        <span class="opt-emoji">🌱</span>
+        <span class="opt-text">Quiero recordar algo</span>
+        <span class="opt-sub">un jardín de recuerdos</span>
+      </button>
+      <button class="opt" type="button" data-go="screen-cajita" style="--tilt:-0.9deg">
+        <span class="opt-emoji">💌</span>
+        <span class="opt-text">Abre una cajita</span>
+        <span class="opt-sub">lo que no sé decirte</span>
+      </button>
+      <button class="opt" type="button" data-go="screen-cielo" style="--tilt:1.7deg">
+        <span class="opt-emoji">✨</span>
+        <span class="opt-text">Déjame llevarte a otro lugar</span>
+        <span class="opt-sub">lejos de todo</span>
+      </button>
+      <button class="opt" type="button" data-go="screen-mirada" style="--tilt:-1.3deg">
+        <span class="opt-emoji">👀</span>
+        <span class="opt-text">Mira lo que veo</span>
+        <span class="opt-sub">préstame los ojos</span>
+      </button>
+      <button class="opt opt-last" type="button" data-go="screen-final" style="--tilt:0.6deg" hidden>
+        <span class="opt-emoji">🌙</span>
+        <span class="opt-text">Y una última cosa</span>
+        <span class="opt-sub">la que no cabía en ninguna cajita</span>
+      </button>
+    </nav>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CARTA ============ -->
+<section class="screen" id="screen-carta" aria-label="Una carta">
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel">
+    <article class="letter" id="letter">
+      <div class="tape tape-l" aria-hidden="true"></div>
+      <div class="tape tape-r" aria-hidden="true"></div>
+      <h2 class="panel-title">Tengo algo para ti</h2>
+      <div class="letter-body" id="letter-body">
+        <p>No sé si alguna vez te lo he dicho de esta manera.</p>
+        <p>Pero hay algo que me hace feliz de todo esto que tenemos:<br>
+           que llegaste a mi vida y, sin darme cuenta, empecé a hacerte espacio en ella.</p>
+        <p>Primero fueron pequeños momentos.<br>
+           Después fueron conversaciones que quería alargar un poquito más.<br>
+           Luego empecé a buscarte sin siquiera pensarlo.</p>
+        <p>Y ahora estás en tantos rincones de mis días que ya no sé en qué momento pasó.</p>
+        <p>Supongo que eso es lo que más me gusta de quererte.<br>
+           Que no ocurrió de golpe.</p>
+        <p>Simplemente, un día me di cuenta de que ya te había elegido en un montón de pequeñas formas.</p>
+        <p class="sign">— para ti ♡</p>
+      </div>
+      <svg class="letter-flower" viewBox="0 0 120 120" aria-hidden="true"></svg>
+    </article>
+  </div>
+</section>
+
+<!-- ============ RECUERDOS ============ -->
+<section class="screen" id="screen-recuerdos" aria-label="Jardín de recuerdos">
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel">
+    <h2 class="panel-title">Quiero recordar algo</h2>
+    <p class="panel-sub">Un jardín pequeño. Cada flor es un momento: tócala y déjala abrirse.</p>
+    <div class="garden" id="garden"></div>
+  </div>
+</section>
+
+<!-- ============ CAJITAS ============ -->
+<section class="screen" id="screen-cajita" aria-label="Cajitas">
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel">
+    <h2 class="panel-title">Abre una cajita</h2>
+    <p class="panel-sub">Aquí guardé las cosas que normalmente no digo. Ábrelas todas.</p>
+    <div class="boxes" id="boxes"></div>
+  </div>
+</section>
+
+<!-- ============ CIELO ============ -->
+<section class="screen" id="screen-cielo" aria-label="Otro lugar">
+  <div class="sky-atmos" aria-hidden="true"></div>
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel panel-center">
+    <p class="sky-line" id="sky-line"></p>
+    <div class="sky-wrap" id="sky-wrap">
+      <p class="sky-hint" id="sky-hint">Toca las estrellas. Todas.</p>
+      <svg class="sky" id="sky" viewBox="0 0 400 360" aria-label="Constelación"></svg>
+    </div>
+    <p class="sky-final" id="sky-final">Y este pequeño rincón existe únicamente para nosotras. ♡</p>
+  </div>
+</section>
+
+<!-- ============ MIRADA ============ -->
+<section class="screen" id="screen-mirada" aria-label="Mira lo que veo">
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel panel-center">
+    <h2 class="panel-title">Mira lo que veo</h2>
+    <p class="mirada-intro">
+      Me gustaría que pudieras verte como te veo yo.<br>
+      Aunque fuera solamente por un momento.
+    </p>
+    <p class="mirada-intro mirada-intro-2">
+      Para que pudieras entender por qué algunas cosas que haces,
+      para ti completamente normales, pueden quedarse conmigo durante días.
+    </p>
+
+    <div class="eyes" id="eyes">
+      <div class="eye-lens" id="eye-lens" aria-hidden="true"></div>
+      <p class="eye-hint" id="eye-hint">Pasa el dedo por aquí. Solo se ve donde miras.</p>
+    </div>
+
+    <p class="mirada-end" id="mirada-end">
+      Y quizá, por un instante,<br>
+      pudieras sentir aunque sea una pequeña parte de todo lo que yo siento cuando pienso en ti.
+      <span class="mirada-end-strong">
+        Si pudiera prestarte algo mío,<br>
+        creo que te prestaría mis ojos.<br>
+        Solo para que pudieras entender.
+      </span>
+    </p>
+  </div>
+</section>
+
+<!-- ============ LA ÚLTIMA ============ -->
+<section class="screen screen-final" id="screen-final" aria-label="Una última cosa">
+  <div class="final-atmos" aria-hidden="true"></div>
+  <button class="back" type="button" data-back>← volver al ramo</button>
+  <div class="panel panel-center">
+    <div class="final-body" id="final-body">
+      <p>Si llegaste hasta aquí, entonces ya viste todas las pequeñas cosas que quería dejarte.</p>
+      <p>Pero hay una que no cabe en ninguna cajita.</p>
+      <p class="final-big">Gracias.</p>
+      <p>Gracias por haber llegado a mi vida de la manera en que lo hiciste.<br>
+         Por quedarte.<br>
+         Por dejarme conocerte.<br>
+         Por permitirme quererte.</p>
+      <p>No sé qué forma tendrán nuestros días dentro de un año,<br>
+         ni todas las cosas que todavía nos esperan.</p>
+      <p>Pero sí sé algo:</p>
+      <p class="final-big">si pudiera volver al momento en que todavía no te conocía,<br>
+         sabiendo todo lo que sé ahora,<br>
+         volvería a elegir encontrarte.</p>
+      <p>Una y otra vez.</p>
+      <p class="final-sign">A ti. <span class="heart">♡</span></p>
+    </div>
+  </div>
+</section>
+
+<script src="js/particles.js?v=18"></script>
+<script src="js/bouquet.js?v=18"></script>
+<script src="js/intro.js?v=18"></script>
+<script src="js/sections.js?v=18"></script>
+</body>
+</html>
