@@ -172,21 +172,19 @@
     var MOMENTS = [
       {
         label: 'Nuestro primer momento',
-        text: 'Quién diría que algo que parecía tan pequeño terminaría significando tanto.'
+        text: 'Quién diría que ese primer encuentro, que en su momento parecía una cosa tan pequeña, iba a terminar convirtiéndose en el comienzo de nosotras.'
       },
       {
         label: 'Ese día',
-        text: 'Todavía me acuerdo de ',
-        fill: '[recuerdo específico]',
-        after: '.'
+        text: 'Todavía me acuerdo de ese día en el cine, de llegar tarde y de que, sin saberlo, estaba llegando también al comienzo de una de las personas que más quiero tener cerca.'
       },
       {
         label: 'Nosotras',
-        text: 'Me gusta pensar que nuestra historia está hecha justamente de estas pequeñas cosas.'
+        text: 'Me gusta pensar que nuestra historia está hecha justamente de estas pequeñas cosas: de las conversaciones que se alargan, de las risas por cualquier tontería, de querer contarnos hasta lo más insignificante del día y de cómo, poquito a poquito, empezaste a formar parte de mi rutina sin que siquiera me diera cuenta.'
       },
       {
         label: 'Hoy',
-        text: 'Y este momento también quería guardarlo aquí.'
+        text: 'Y este momento también quería guardarlo aquí. Porque quizá algún día miremos todo esto desde lejos y nos dé risa pensar en cómo empezó, pero yo voy a seguir pensando que qué bonito fue encontrarte justo a ti.'
       }
     ];
 

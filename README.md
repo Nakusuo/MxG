@@ -59,16 +59,13 @@ Casi todo el contenido está en arrays al principio de cada módulo:
 - La carta → directamente en `index.html:92`
 - El cierre → directamente en `index.html:180`
 
-En `MOMENTS` hay un hueco a propósito: el segundo recuerdo tiene
-`fill: '[recuerdo específico]'`, pensado para rellenarlo.
-
 Los textos se insertan con `textContent` (nunca `innerHTML`), así que para un
 salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 
 ## Caché
 
-El HTML enlaza los archivos con `?v=19` y `js/intro.js` imprime
-`build 19` en la consola. Si editas el CSS o el JS, sube ese número en los
+El HTML enlaza los archivos con `?v=20` y `js/intro.js` imprime
+`build 20` en la consola. Si editas el CSS o el JS, sube ese número en los
 cinco enlaces de `index.html` para que el navegador no sirva la versión vieja.
 
 ## Detalles
