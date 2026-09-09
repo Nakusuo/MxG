@@ -5,7 +5,7 @@
   'use strict';
 
   /* para saber de un vistazo si el navegador cargó la versión nueva */
-  if (window.console) console.info('Para ti ♡ · build 18');
+  if (window.console) console.info('Te hice algo ♡ · build 19');
 
   var intro = document.getElementById('screen-intro');
   var skipBtn = document.getElementById('skip-btn');
