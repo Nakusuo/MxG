@@ -1,0 +1,21 @@
+#!/bin/sh
+# Sube el ?v= de index.html (y el "build N" de js/intro.js) cuando el commit
+# toca css/ o js/, para que el navegador no sirva la versión cacheada vieja.
+
+changed=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(css|js)/')
+[ -z "$changed" ] && exit 0
+
+# si ya subiste el número a mano en este commit, no lo toco
+if git diff --cached -U0 -- index.html | grep -q '^+.*?v='; then
+  exit 0
+fi
+
+cur=$(grep -oE '\?v=[0-9]+' index.html | head -1 | cut -d= -f2)
+[ -z "$cur" ] && exit 0
+next=$((cur + 1))
+
+sed -i "s/?v=$cur/?v=$next/g" index.html
+sed -i "s/build $cur/build $next/" js/intro.js
+git add index.html js/intro.js
+
+echo "pre-commit: cache-busting v=$cur → v=$next"

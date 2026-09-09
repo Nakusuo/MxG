@@ -65,8 +65,14 @@ salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 ## Caché
 
 El HTML enlaza los archivos con `?v=20` y `js/intro.js` imprime
-`build 20` en la consola. Si editas el CSS o el JS, sube ese número en los
-cinco enlaces de `index.html` para que el navegador no sirva la versión vieja.
+`build 20` en la consola, para que el navegador no sirva la versión vieja.
+
+De eso se encarga el hook `.githooks/pre-commit`: cuando un commit toca
+`css/` o `js/`, sube el número solo. Para activarlo en un clon nuevo:
+
+```sh
+git config core.hooksPath .githooks
+```
 
 ## Detalles
 
