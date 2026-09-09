@@ -67,8 +67,8 @@ salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 
 ## Caché
 
-El HTML enlaza los archivos con `?v=18` y `js/intro.js` imprime
-`build 18` en la consola. Si editas el CSS o el JS, sube ese número en los
+El HTML enlaza los archivos con `?v=19` y `js/intro.js` imprime
+`build 19` en la consola. Si editas el CSS o el JS, sube ese número en los
 cinco enlaces de `index.html` para que el navegador no sirva la versión vieja.
 
 ## Detalles

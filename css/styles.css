@@ -26,6 +26,7 @@
   --hand:'Patrick Hand', 'Segoe Print', 'Bradley Hand', cursive;
   --script:'Caveat', 'Segoe Script', cursive;
   --note:'Gloria Hallelujah', 'Patrick Hand', cursive;
+  --display:'Parisienne', 'Snell Roundhand', 'Segoe Script', cursive;
 
   --ease-soft:cubic-bezier(.22,.61,.36,1);
   --ease-elastic:cubic-bezier(.34,1.48,.5,1);
@@ -139,10 +140,10 @@ body{
 }
 
 .title{
-  font-family:var(--script);
-  font-weight:600;
-  font-size:clamp(2.9rem, 9.5vw, 5.4rem);
-  line-height:1;
+  font-family:var(--display);
+  font-weight:400;
+  font-size:clamp(3.1rem, 10.4vw, 5.9rem);
+  line-height:1.18;
   margin:0;
   color:#fff6e2;
   letter-spacing:.01em;
