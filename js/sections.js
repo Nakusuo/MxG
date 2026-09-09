@@ -376,7 +376,7 @@
 
     var LINES = [
       'Cierra los ojos por un segundo.',
-      'Bueno… técnicamente no, porque necesitas seguir mirando la pantalla JAJA.',
+      'Literalmente no claroXD porque necesito que sigas mirando la pantalla jkasdj.',
       'Pero imagina que por un momento estamos en algún lugar lejos de todo.',
       'Solo tú y yo.'
     ];
