@@ -64,8 +64,8 @@ salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 
 ## Caché
 
-El HTML enlaza los archivos con `?v=25` y `js/intro.js` imprime
-`build 25` en la consola, para que el navegador no sirva la versión vieja.
+El HTML enlaza los archivos con `?v=26` y `js/intro.js` imprime
+`build 26` en la consola, para que el navegador no sirva la versión vieja.
 
 De eso se encarga el hook `.githooks/pre-commit`: cuando un commit toca
 `css/` o `js/`, sube el número solo. Para activarlo en un clon nuevo:
@@ -100,7 +100,10 @@ git config core.hooksPath .githooks
     Para que no quede tieso, cada flor se corta en capas —capullo, pétalos
     de fuera, pétalos de dentro, centro y resplandor— y se abre por etapas
     como en el SVG; cada flor cabecea a su ritmo, y los tallos de atrás, los
-    de delante y el lazo se mecen por separado desde la base. El SVG queda
+    de delante y el lazo se mecen por separado desde la base. Los tallos no
+    se destapan con un barrido: se dibujan de verdad a lo largo de su curva,
+    uno tras otro, en un lienzo por grupo, y las hojas brotan desde su base
+    con rebote; al terminar, ese lienzo se queda quieto. El SVG queda
     escondido (clase `sprited`); si algo falla al pintar, se vuelve a él;
   - en vez de mecer cada tallo, cada hoja y cada cabeza por separado (eran
     unas 133 animaciones eternas repintando el SVG entero a 60 fps), se mece

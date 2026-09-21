@@ -1206,8 +1206,9 @@ html.lite .memory-text{transition-duration:.5s, .45s;}
 
 /* ---------- el ramo en trozos (teléfonos) ----------
    El SVG queda escondido y sin animar; se ven los lienzos.
-   Todo lo de aquí anima solo transform y opacity: la GPU lo mueve
-   sin repintar el dibujo. */
+   Tallos y hojas se dibujan en un lienzo por grupo mientras crecen
+   (ver Bouquet.sprite); las flores son capas que solo se mueven con
+   transform y opacity, que la GPU hace sin repintar. */
 html.lite #screen-intro.sprited #bouquet{visibility:hidden;}
 html.lite #screen-intro.sprited #bouquet *{animation:none !important;}
 #screen-intro:not(.sprited) #bq-sprites{display:none;}
@@ -1226,16 +1227,6 @@ html.lite #screen-intro.sprited #bouquet *{animation:none !important;}
   0%,100%{transform:rotate(var(--sw,.3deg));}
   50%{transform:rotate(calc(var(--sw,.3deg) * -1));}
 }
-
-/* tallos: crecen de abajo arriba. La caja sube y el dibujo baja lo
-   mismo, así se destapa sin repintar; el dibujo además se estira un
-   poco, como un tallo que empuja */
-.spr-grow{position:absolute; inset:0; overflow:hidden;}
-.spr-grow > canvas{transform-origin:50% 100%;}
-.spr-grow.anim{animation:sprUp var(--dur,2s) var(--dl,0s) cubic-bezier(.32,.72,.32,1) both;}
-.spr-grow.anim > canvas{animation:sprDown var(--dur,2s) var(--dl,0s) cubic-bezier(.32,.72,.32,1) both;}
-@keyframes sprUp{from{transform:translate3d(0,100%,0);} to{transform:translate3d(0,0,0);}}
-@keyframes sprDown{from{transform:translate3d(0,-100%,0) scaleY(.9);} to{transform:translate3d(0,0,0) scaleY(1);}}
 
 /* cada flor cabecea por su cuenta */
 .spr-flower{
@@ -1298,12 +1289,6 @@ html.lite #screen-intro.sprited #bouquet *{animation:none !important;}
   50%{opacity:1; transform:scale(1.06);}
 }
 
-/* hojas grandes y lazo */
-.spr-wrap.anim{animation:sprRise 1.3s var(--dl,0s) var(--ease-soft) both;}
-@keyframes sprRise{
-  from{opacity:0; transform:translate3d(0,26px,0);}
-  to{opacity:1; transform:translate3d(0,0,0);}
-}
 
 @media (prefers-reduced-motion:reduce){
   html.lite #screen-intro.is-settled #bouquet{animation:none; will-change:auto;}
