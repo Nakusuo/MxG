@@ -431,13 +431,14 @@
     var budDelay = T.budStart + order * T.budStep;
     var openDelay = T.openStart + order * T.openStep;
 
-    /* lo que necesita el modo sprites para recortar esta cabeza y saber
-       cuándo abrirla: centro, medio lado del recorte (incluye el resplandor)
-       y momento de entrada */
+    /* lo que necesita el modo sprites para recortar esta cabeza en capas
+       y saber cuándo abrir cada una */
     pos.setAttribute('data-x', spec.x);
     pos.setAttribute('data-y', spec.y);
-    pos.setAttribute('data-half', round(spec.r * (isBud ? 1.55 : small ? 2.2 : 1.95)));
-    pos.setAttribute('data-at', round(isBud ? budDelay : openDelay - 0.35));
+    pos.setAttribute('data-r', spec.r);
+    pos.setAttribute('data-kind', isBud ? 'bud' : small ? 'daisy' : 'flower');
+    pos.setAttribute('data-bud', round(budDelay));
+    pos.setAttribute('data-open', round(openDelay));
 
     if (isBud) {
       buildBud(head, spec.r, budDelay, green);
@@ -526,7 +527,7 @@
     var petalsG = el('g', { class: 'petals' }, head);
 
     layers.forEach(function (L, li) {
-      var lg = el('g', { opacity: L.op }, petalsG);
+      var lg = el('g', { class: 'pl', opacity: L.op }, petalsG);
       /* el reparto angular se desordena: unos pétalos se juntan y otros se separan */
       var gaps = [], total = 0, gi;
       for (gi = 0; gi < L.n; gi++) { var gv = rand(0.72, 1.28); gaps.push(gv); total += gv; }
@@ -681,7 +682,7 @@
     var petalsG = el('g', { class: 'petals' }, head);
 
     rings.forEach(function (L, li) {
-      var ring = el('g', {}, petalsG);
+      var ring = el('g', { class: 'pl' }, petalsG);
       var gaps = [], total = 0, gi;
       for (gi = 0; gi < L.n; gi++) { var gv = rand(0.75, 1.25); gaps.push(gv); total += gv; }
       var acc = rand(0, 40);
@@ -980,153 +981,243 @@
      MODO SPRITES (teléfonos)
      Animar el SVG obliga al teléfono a repintar el ramo entero, con sus
      3.000 piezas, en cada fotograma: por eso la entrada iba a trompicones.
-     Aquí el ramo se pinta UNA vez, en trozos (tallos de atrás, cada cabeza,
-     tallos de delante, lazo), cada trozo en su propio lienzo. Luego solo se
-     mueven esos lienzos con transform, que la tarjeta gráfica hace sin
-     repintar nada. El dibujo es exactamente el mismo: sale del mismo SVG.
+     Aquí el ramo se pinta UNA vez, en trozos, cada uno en su propio lienzo,
+     y luego solo se mueven esos lienzos con transform y opacity, que la
+     tarjeta gráfica hace sin repintar nada.
 
+     Para que no quede tieso, los trozos imitan cómo se movía el SVG:
+     · tres grupos (tallos de atrás, de delante y el lazo) que se mecen
+       desde la base, cada uno a su ritmo, con sus flores montadas encima;
+     · cada flor cabecea por su cuenta;
+     · y cada flor se abre por capas: capullo, pétalos de fuera, pétalos de
+       dentro girando al revés, centro y resplandor.
+
+     Primero se pintan los tallos (hacen falta enseguida) y luego las
+     flores, que no entran hasta pasados un par de segundos.
      Devuelve una promesa. Si algo falla, quien llama vuelve al SVG.
      ======================================================= */
   function sprite(opts) {
     opts = opts || {};
-    return new Promise(function (resolve, reject) {
-      var svg = document.getElementById('bouquet');
-      var stage = document.getElementById('stage');
-      var intro = document.getElementById('screen-intro');
-      if (!svg || !stage) return reject(new Error('no hay ramo'));
+    var svg = document.getElementById('bouquet');
+    var stage = document.getElementById('stage');
+    var intro = document.getElementById('screen-intro');
+    if (!svg || !stage) return Promise.reject(new Error('no hay ramo'));
 
-      var box = svg.getBoundingClientRect();
-      var sbox = stage.getBoundingClientRect();
-      var ctm = svg.getScreenCTM();
-      if (!box.width || !box.height || !ctm || !ctm.a) return reject(new Error('el ramo no tiene medidas'));
+    var box = svg.getBoundingClientRect();
+    var sbox = stage.getBoundingClientRect();
+    var ctm = svg.getScreenCTM();
+    if (!box.width || !box.height || !ctm || !ctm.a) return Promise.reject(new Error('el ramo no tiene medidas'));
 
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var W = box.width, H = box.height;
-      var FW = Math.max(1, Math.round(W * dpr)), FH = Math.max(1, Math.round(H * dpr));
-      var ser = new XMLSerializer();
-      var defs = ser.serializeToString(document.getElementById('bq-defs'));
-      var vb = svg.getAttribute('viewBox');
-      var par = svg.getAttribute('preserveAspectRatio') || 'xMidYMax meet';
+    var DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var W = box.width, H = box.height, K = ctm.a;
+    var FW = Math.max(1, Math.round(W * DPR)), FH = Math.max(1, Math.round(H * DPR));
+    var ser = new XMLSerializer();
+    var defs = ser.serializeToString(document.getElementById('bq-defs'));
+    var vb = svg.getAttribute('viewBox');
+    var par = svg.getAttribute('preserveAspectRatio') || 'xMidYMax meet';
+    var animate = !opts.still && !(intro && intro.classList.contains('is-settled'));
 
-      function doc(inner, viewBox, w, h, ar) {
-        return '<svg xmlns="' + NS + '" viewBox="' + viewBox + '" width="' + w + '" height="' + h +
-          '" preserveAspectRatio="' + ar + '">' + defs + inner + '</svg>';
+    function stale() { return !!(opts.stale && opts.stale()); }
+    function now() { return (performance.now() - t0) / 1000; }
+    function px(ux, uy) { return { x: K * ux + ctm.e - box.left, y: ctm.d * uy + ctm.f - box.top }; }
+    function doc(inner, viewBox, w, h, ar) {
+      return '<svg xmlns="' + NS + '" viewBox="' + viewBox + '" width="' + w + '" height="' + h +
+        '" preserveAspectRatio="' + ar + '">' + defs + inner + '</svg>';
+    }
+    function raster(str, cw, ch) {
+      return new Promise(function (ok, ko) {
+        var url = URL.createObjectURL(new Blob([str], { type: 'image/svg+xml' }));
+        var img = new Image();
+        img.onload = function () {
+          var c = document.createElement('canvas');
+          c.width = cw; c.height = ch;
+          c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+          URL.revokeObjectURL(url);
+          ok(c);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); ko(new Error('no se pudo pintar un trozo')); };
+        img.src = url;
+      });
+    }
+    function drop(node, sel) {
+      var list = node.querySelectorAll(sel);
+      for (var i = 0; i < list.length; i++) list[i].parentNode.removeChild(list[i]);
+    }
+
+    /* ---------- fase 1: tallos y lazo ---------- */
+    function stems(id) {
+      var c = document.getElementById(id).cloneNode(true);
+      drop(c, '.flower-pos');
+      return doc(ser.serializeToString(c), vb, FW, FH, par);
+    }
+    var nBack = document.querySelectorAll('#bq-back > .stalk').length;
+    var nFront = document.querySelectorAll('#bq-front > .stalk').length;
+    var wrapStr = doc(ser.serializeToString(document.getElementById('bq-wrap')), vb, FW, FH, par);
+
+    var base = px(BASE_X, BASE_Y);
+    function layer(sw, sd, sdl) {
+      var g = document.createElement('div');
+      g.className = 'spr-layer';
+      g.style.transformOrigin = base.x.toFixed(1) + 'px ' + base.y.toFixed(1) + 'px';
+      g.style.setProperty('--sw', sw + 'deg');
+      g.style.setProperty('--sd', sd + 's');
+      g.style.setProperty('--sdl', sdl + 's');
+      return g;
+    }
+    function grow(c, dl, dur) {
+      c.style.width = W + 'px';
+      c.style.height = H + 'px';
+      var g = document.createElement('div');
+      g.className = 'spr-grow';
+      g.style.setProperty('--dur', dur.toFixed(2) + 's');
+      if (animate) { g.classList.add('anim'); g.style.setProperty('--dl', (dl - now()).toFixed(2) + 's'); }
+      g.appendChild(c);
+      return g;
+    }
+
+    /* ---------- fase 2: cada flor, en capas ---------- */
+    var PARTS = {
+      bud:   [['bud', 1.55]],
+      daisy: [['glow', 2.2], ['bud', 1.0], ['outer', 1.5], ['disc', 0.75]],
+      flower:[['glow', 1.95], ['bud', 1.0], ['outer', 1.5], ['inner', 1.5], ['disc', 0.75]]
+    };
+    var CUT = {
+      glow: '.bud-inner, .petals, .disc-inner',
+      bud: '.glow, .petals, .disc-inner',
+      outer: '.glow, .bud-inner, .disc-inner',
+      inner: '.glow, .bud-inner, .disc-inner',
+      disc: '.glow, .bud-inner, .petals'
+    };
+    function cut(pos, which) {
+      var c = pos.cloneNode(true);
+      var head = c.querySelector('.flower-head');
+      /* la transparencia de las flores del fondo se aplica a la flor entera
+         (a la caja), no a cada capa: si no, se transparentarían entre sí */
+      if (head) head.removeAttribute('opacity');
+      var glows = c.querySelectorAll('.glow');
+      for (var g = 0; g < glows.length; g++) glows[g].removeAttribute('opacity');
+      drop(c, CUT[which]);
+      var layers = c.querySelectorAll('.pl');
+      if (which === 'outer') for (var i = 1; i < layers.length; i++) layers[i].parentNode.removeChild(layers[i]);
+      if (which === 'inner') {
+        if (layers.length < 2) return null;
+        layers[0].parentNode.removeChild(layers[0]);
       }
-      /* una capa de tallos y hojas, sin las cabezas (esas van aparte) */
-      function stems(id) {
-        var c = document.getElementById(id).cloneNode(true);
-        var heads = c.querySelectorAll('.flower-pos');
-        for (var i = 0; i < heads.length; i++) heads[i].parentNode.removeChild(heads[i]);
-        return doc(ser.serializeToString(c), vb, FW, FH, par);
-      }
+      if (!c.querySelector('path, ellipse, circle')) return null;
+      return ser.serializeToString(c);
+    }
 
-      var specs = [];
-      function heads(id) {
-        var list = document.querySelectorAll('#' + id + ' .flower-pos');
-        for (var i = 0; i < list.length; i++) {
-          var pos = list[i];
-          var x = +pos.getAttribute('data-x'), y = +pos.getAttribute('data-y');
-          var half = +pos.getAttribute('data-half');
-          if (!half) continue;
-          var ux = x - half, uy = y - half, us = half * 2;
-          var size = ctm.a * us;
-          var cs = Math.max(1, Math.round(size * dpr));
-          specs.push({
-            type: 'head',
-            str: doc(ser.serializeToString(pos), ux + ' ' + uy + ' ' + us + ' ' + us, cs, cs, 'none'),
-            cw: cs, ch: cs,
-            left: ctm.a * ux + ctm.e - box.left,
-            top: ctm.d * uy + ctm.f - box.top,
-            size: size,
-            dl: +pos.getAttribute('data-at')
-          });
-        }
-      }
-
-      var nBack = document.querySelectorAll('#bq-back > .stalk').length;
-      var nFront = document.querySelectorAll('#bq-front > .stalk').length;
-
-      /* mismo orden de apilado que el SVG: atrás, sus cabezas, delante,
-         sus cabezas, y el lazo por encima de todo */
-      specs.push({ type: 'stems', str: stems('bq-back'), cw: FW, ch: FH,
-                   dl: T.stemStart, dur: nBack * T.stemStep + T.stemDur });
-      heads('bq-back');
-      specs.push({ type: 'stems', str: stems('bq-front'), cw: FW, ch: FH,
-                   dl: T.stemStart + nBack * T.stemStep, dur: nFront * T.stemStep + T.stemDur });
-      heads('bq-front');
-      specs.push({ type: 'wrap', str: doc(ser.serializeToString(document.getElementById('bq-wrap')), vb, FW, FH, par),
-                   cw: FW, ch: FH, dl: T.leafStart + 0.5 });
-
-      function raster(spec) {
-        return new Promise(function (ok, ko) {
-          var url = URL.createObjectURL(new Blob([spec.str], { type: 'image/svg+xml' }));
-          var img = new Image();
-          img.onload = function () {
-            var c = document.createElement('canvas');
-            c.width = spec.cw; c.height = spec.ch;
-            c.getContext('2d').drawImage(img, 0, 0, spec.cw, spec.ch);
-            URL.revokeObjectURL(url);
-            ok(c);
-          };
-          img.onerror = function () { URL.revokeObjectURL(url); ko(new Error('no se pudo pintar un trozo')); };
-          img.src = url;
+    function flowerJobs(pos, i) {
+      var kind = pos.getAttribute('data-kind') || 'flower';
+      var x = +pos.getAttribute('data-x'), y = +pos.getAttribute('data-y'), r = +pos.getAttribute('data-r');
+      var parts = PARTS[kind] || PARTS.flower;
+      var Hmax = 0;
+      parts.forEach(function (p) { Hmax = Math.max(Hmax, p[1] * r); });
+      var jobs = [];
+      parts.forEach(function (p) {
+        var str = cut(pos, p[0]);
+        if (!str) return;
+        var h = p[1] * r, us = h * 2;
+        /* el resplandor es borroso: se pinta a menos resolución */
+        var d = p[0] === 'glow' ? Math.max(0.5, DPR * 0.35) : DPR;
+        var cs = Math.max(1, Math.round(us * K * d));
+        jobs.push({
+          which: p[0], cs: cs, off: (Hmax - h) * K, size: us * K,
+          str: doc(str, (x - h) + ' ' + (y - h) + ' ' + us + ' ' + us, cs, cs, 'none')
         });
-      }
+      });
+      /* cada flor cabecea con su propio ritmo, fijo para cada una */
+      var q = (i * 0.6180339) % 1;
+      return {
+        pos: pos, kind: kind, jobs: jobs, at: px(x - Hmax, y - Hmax), size: Hmax * 2 * K,
+        dim: (pos.querySelector('.flower-head') || pos).getAttribute('opacity'),
+        bud: +pos.getAttribute('data-bud'), open: +pos.getAttribute('data-open'),
+        nod: ((i % 2 ? 1 : -1) * (0.7 + q * 1.3)).toFixed(2), nd: (5.5 + q * 4).toFixed(2), ndl: (-q * 6).toFixed(2)
+      };
+    }
 
-      Promise.all(specs.map(raster)).then(function (canvases) {
-        /* si mientras se pintaba cambió el tamaño y ya hay otro pintado
-           en marcha, este llega tarde: no pisa al nuevo */
-        if (opts.stale && opts.stale()) return resolve();
-        var host = document.getElementById('bq-sprites');
-        if (!host) {
-          host = document.createElement('div');
-          host.id = 'bq-sprites';
-          host.setAttribute('aria-hidden', 'true');
-          stage.appendChild(host);
-        }
-        host.style.left = (box.left - sbox.left) + 'px';
-        host.style.top = (box.top - sbox.top) + 'px';
-        host.style.width = W + 'px';
-        host.style.height = H + 'px';
+    function flowerNode(f, canvases) {
+      var fl = document.createElement('div');
+      fl.className = 'spr-flower';
+      fl.style.left = f.at.x.toFixed(1) + 'px';
+      fl.style.top = f.at.y.toFixed(1) + 'px';
+      fl.style.width = fl.style.height = f.size.toFixed(1) + 'px';
+      if (f.dim) fl.style.opacity = f.dim;
+      fl.style.setProperty('--nod', f.nod + 'deg');
+      fl.style.setProperty('--nd', f.nd + 's');
+      fl.style.setProperty('--ndl', f.ndl + 's');
 
-        /* si ya terminó (o ella saltó la intro mientras se pintaba),
-           los trozos aparecen quietos en su sitio; si no, la animación
-           retoma por donde iría el reloj del ramo */
-        var animate = !opts.still && !(intro && intro.classList.contains('is-settled'));
-        var elapsed = (performance.now() - t0) / 1000;
-        var frag = document.createDocumentFragment();
-
-        specs.forEach(function (spec, i) {
-          var c = canvases[i], node = c;
-          if (spec.type === 'head') {
-            c.className = 'spr-head';
-            c.style.left = spec.left + 'px';
-            c.style.top = spec.top + 'px';
-            c.style.width = c.style.height = spec.size + 'px';
+      var t = now();
+      var DL = { glow: f.open + 0.2, outer: f.open, inner: f.open + 0.14, disc: f.open + 0.28 };
+      f.jobs.forEach(function (j, k) {
+        var c = canvases[k];
+        c.className = 'spr-' + j.which + (j.which === 'bud' && f.kind !== 'bud' ? ' has-sepals' : '');
+        c.style.left = c.style.top = j.off.toFixed(1) + 'px';
+        c.style.width = c.style.height = j.size.toFixed(1) + 'px';
+        if (animate) {
+          c.classList.add('anim');
+          if (j.which === 'bud') {
+            c.style.setProperty('--bdl', (f.bud - t).toFixed(2) + 's');
+            c.style.setProperty('--odl', (f.open - t).toFixed(2) + 's');
           } else {
-            c.style.width = W + 'px';
-            c.style.height = H + 'px';
-            if (spec.type === 'wrap') c.className = 'spr-wrap';
+            c.style.setProperty('--dl', (DL[j.which] - t).toFixed(2) + 's');
           }
-          if (spec.type === 'stems') {
-            /* crecer de abajo arriba sin repintar: la caja sube y el
-               dibujo baja lo mismo, así solo se ve la parte ya "crecida" */
-            node = document.createElement('div');
-            node.className = 'spr-grow';
-            node.style.setProperty('--dur', spec.dur.toFixed(2) + 's');
-            node.appendChild(c);
-          }
-          if (animate) {
-            node.classList.add('anim');
-            node.style.setProperty('--dl', (spec.dl - elapsed).toFixed(2) + 's');
-          }
-          frag.appendChild(node);
-        });
+        }
+        fl.appendChild(c);
+      });
+      return fl;
+    }
 
-        host.textContent = '';
-        host.appendChild(frag);
-        resolve();
-      }, reject);
+    return Promise.all([
+      raster(stems('bq-back'), FW, FH),
+      raster(stems('bq-front'), FW, FH),
+      raster(wrapStr, FW, FH)
+    ]).then(function (c) {
+      if (stale()) return;
+
+      var back = layer(0.35, 9.5, -2);
+      var front = layer(-0.5, 7.4, -5);
+      var tie = layer(0.22, 11, -3.5);
+      back.appendChild(grow(c[0], T.stemStart, nBack * T.stemStep + T.stemDur));
+      front.appendChild(grow(c[1], T.stemStart + nBack * T.stemStep, nFront * T.stemStep + T.stemDur));
+      c[2].className = 'spr-wrap';
+      c[2].style.width = W + 'px';
+      c[2].style.height = H + 'px';
+      if (animate) { c[2].classList.add('anim'); c[2].style.setProperty('--dl', (T.leafStart + 0.5 - now()).toFixed(2) + 's'); }
+      tie.appendChild(c[2]);
+
+      var host = document.getElementById('bq-sprites');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'bq-sprites';
+        host.setAttribute('aria-hidden', 'true');
+        stage.appendChild(host);
+      }
+      host.style.left = (box.left - sbox.left) + 'px';
+      host.style.top = (box.top - sbox.top) + 'px';
+      host.style.width = W + 'px';
+      host.style.height = H + 'px';
+      host.textContent = '';
+      host.appendChild(back);
+      host.appendChild(front);
+      host.appendChild(tie);
+
+      /* fase 2: las flores, en el orden en que se apilan en el SVG */
+      var flowers = [], idx = 0;
+      [['bq-back', back], ['bq-front', front]].forEach(function (g) {
+        var list = document.querySelectorAll('#' + g[0] + ' .flower-pos');
+        for (var i = 0; i < list.length; i++) {
+          var f = flowerJobs(list[i], idx++);
+          f.layer = g[1];
+          flowers.push(f);
+        }
+      });
+      return Promise.all(flowers.map(function (f) {
+        return Promise.all(f.jobs.map(function (j) { return raster(j.str, j.cs, j.cs); }));
+      })).then(function (all) {
+        if (stale()) return;
+        flowers.forEach(function (f, i) { f.layer.appendChild(flowerNode(f, all[i])); });
+      });
     });
   }
 
