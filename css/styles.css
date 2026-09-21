@@ -109,6 +109,15 @@ body{
   transform:scale(1.035) translateY(-14px);
   filter:blur(3px);
 }
+/* una pantalla que no se ve no debe costar nada: ni animaciones corriendo
+   ni el ramo repintandose detras. Es lo que mas alivia al telefono. */
+.screen:not(.is-active):not(.is-leaving),
+.screen:not(.is-active):not(.is-leaving) *{
+  animation-play-state:paused !important;
+}
+.screen:not(.is-active):not(.is-leaving) .stage{
+  content-visibility:hidden;
+}
 
 /* =========================================================
    PANTALLA DEL RAMO
@@ -306,15 +315,22 @@ body{
   transform:translateY(0) rotate(var(--tilt)) scale(1);
   animation:none !important;
 }
-#screen-intro.step-options .opt:hover,
-#screen-intro.step-options .opt:focus-visible{
+@media (hover:hover){
+#screen-intro.step-options .opt:hover{
   outline:none;
   opacity:1;
   border-image-source:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><path d='M16,7 C34,3 52,7 68,5 C80,4 90,9 89,20 C91,34 87,44 90,56 C88,68 91,80 84,86 C74,91 58,86 44,89 C30,91 14,92 9,85 C5,76 8,64 6,50 C8,36 4,20 8,13 C11,8 12,8 16,7 Z' fill='%231d2622' fill-opacity='0.78' stroke='%23ffc2da' stroke-opacity='0.95' stroke-width='2.8' stroke-linejoin='round' stroke-linecap='round'/></svg>");
   box-shadow:0 16px 32px rgba(0,0,0,.5), 0 0 26px rgba(233,140,178,.18);
   transform:translateY(-5px) rotate(calc(var(--tilt) * .35)) scale(1.035);
 }
-.opt:hover::after, .opt:focus-visible::after{opacity:1;}
+.opt:hover::after{opacity:1;}
+}
+#screen-intro.step-options .opt:focus-visible{
+  outline:2px solid rgba(255,190,215,.75);
+  outline-offset:2px;
+  opacity:1;
+}
+.opt:focus-visible::after{opacity:1;}
 .opt.is-chosen{
   animation:chosen .6s var(--ease-soft) forwards !important;
 }
@@ -340,7 +356,6 @@ body{
   padding:8px 10px; border-radius:12px;
   transition:color .3s, background .3s, opacity .5s;
 }
-.skip:hover{color:rgba(255,190,215,.9); background:rgba(255,255,255,.05);}
 .skip.gone{opacity:0; pointer-events:none;}
 
 /* =========================================================
@@ -534,7 +549,6 @@ body{
   backdrop-filter:blur(6px);
   transition:color .3s, border-color .3s, transform .3s, background .3s;
 }
-.back:hover{color:#ffc2da; border-color:rgba(233,140,178,.6); transform:translateX(-3px); background:rgba(255,255,255,.08);}
 
 /* ---------- carta ---------- */
 .letter{
@@ -616,7 +630,6 @@ body{
   animation:cardIn .9s var(--ease-elastic) forwards;
   animation-delay:calc(.3s + var(--i,0) * .13s);
 }
-.memory:hover{border-color:rgba(233,140,178,.5);}
 .memory.open{
   border-color:rgba(233,140,178,.65);
   box-shadow:0 14px 34px rgba(0,0,0,.45), 0 0 36px rgba(233,140,178,.14);
@@ -637,13 +650,17 @@ body{
   display:block; font-family:var(--script);
   font-size:1.4rem; color:#ffc2da; line-height:1.15; margin-bottom:2px;
 }
+/* se abre con grid-template-rows en vez de max-height: el recorrido es el
+   alto real del texto, asi que no hay ni tiron al final ni saltos de layout */
 .memory-text{
-  display:block; font-size:1rem; line-height:1.55;
+  display:grid; grid-template-rows:0fr;
+  font-size:1rem; line-height:1.55;
   color:var(--ink-soft);
-  max-height:0; opacity:0;
-  transition:max-height .8s var(--ease-soft), opacity .6s .12s;
+  opacity:0;
+  transition:grid-template-rows .7s var(--ease-soft), opacity .6s .12s;
 }
-.memory.open .memory-text{max-height:260px; opacity:1;}
+.memory-text-in{display:block; min-height:0; overflow:hidden;}
+.memory.open .memory-text{grid-template-rows:1fr; opacity:1;}
 .memory-hint{
   position:absolute; right:14px; top:12px;
   font-family:var(--script); font-size:1rem;
@@ -718,7 +735,12 @@ body{
   animation:cardIn .9s var(--ease-elastic) forwards;
   animation-delay:calc(.3s + var(--i,0) * .1s);
 }
-.gift:hover{border-color:rgba(233,140,178,.55); transform:rotate(calc(var(--tilt) * .3)) translateY(-4px);}
+@media (hover:hover){
+  .gift:hover{border-color:rgba(233,140,178,.55); transform:rotate(calc(var(--tilt) * .3)) translateY(-4px);}
+  .memory:hover{border-color:rgba(233,140,178,.5);}
+    .back:hover{color:#ffc2da; border-color:rgba(233,140,178,.6); transform:translateX(-3px); background:rgba(255,255,255,.08);}
+  .skip:hover{color:rgba(255,190,215,.9); background:rgba(255,255,255,.05);}
+  }
 .gift.open, .gift:hover, .memory.open, .memory:hover{z-index:3;}
 .gift.open{
   border-color:rgba(233,140,178,.62);
@@ -742,13 +764,14 @@ body{
   font-size:1.3rem; line-height:1.2; color:#ffc2da; margin-bottom:2px;
 }
 .gift-text{
-  display:block; font-size:1rem; line-height:1.62;
+  display:grid; grid-template-rows:0fr;
+  font-size:1rem; line-height:1.62;
   color:var(--ink-soft);
-  max-height:0; opacity:0;
-  overflow:hidden;
-  transition:max-height 1.1s var(--ease-soft), opacity .7s .15s;
+  opacity:0;
+  transition:grid-template-rows .85s var(--ease-soft), opacity .7s .15s;
 }
-.gift.open .gift-text{max-height:1800px; opacity:1;}
+.gift-text-in{display:block; min-height:0; overflow:hidden;}
+.gift.open .gift-text{grid-template-rows:1fr; opacity:1;}
 .gift-para{margin:0 0 .85em;}
 .gift-para:last-child{margin-bottom:0;}
 .gift-strong{
@@ -1131,4 +1154,56 @@ body{
   .final-big{font-size:1.6rem !important;}
   .final-sign{font-size:1.9rem !important;}
   .mirada-end-strong{font-size:1.35rem;}
+}
+
+/* =========================================================
+   MODO LIGERO  (html.lite)
+   Teléfonos y equipos modestos. La idea: el ramo se dibuja igual,
+   pero cuando termina de entrar deja de repintarse. En vez de ~135
+   animaciones infinitas repartidas por el SVG (una por tallo, hoja,
+   cabeza y resplandor) se mece el ramo entero, que es una sola capa
+   que la GPU ya tiene guardada.
+   ========================================================= */
+html.lite .grain{
+  /* el grano sigue ahí, pero quieto: moverlo obligaba a mezclar
+     la pantalla completa en cada fotograma */
+  animation:none;
+}
+html.lite .screen.is-leaving{filter:none;}
+html.lite .back,
+html.lite .toast{
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+html.lite .back{background:rgba(24,18,30,.72);}
+html.lite .toast{background:linear-gradient(160deg, rgba(120,58,86,.94), rgba(46,72,50,.94));}
+
+/* nada de vaivén por pieza */
+html.lite #screen-intro.is-playing .stalk,
+html.lite #screen-intro.is-playing .flower-head{animation:none;}
+/* estas dos conservan su entrada y pierden solo el bucle */
+html.lite #screen-intro.is-playing .leaf-inner{
+  animation:leafPop 1.15s var(--d,0s) var(--ease-elastic) forwards;
+}
+html.lite #screen-intro.is-playing .glow{
+  animation:glowIn 2.4s var(--d,0s) ease-out forwards;
+}
+
+/* el ramo entero respira: un solo transform, compuesto en GPU */
+html.lite #screen-intro.is-settled #bouquet{
+  transform-origin:50% 100%;
+  will-change:transform;
+  animation:bqBreeze 11s ease-in-out infinite;
+}
+@keyframes bqBreeze{
+  0%,100%{transform:rotate(-.32deg) translate3d(0,0,0);}
+  50%{transform:rotate(.32deg) translate3d(0,-5px,0);}
+}
+
+html.lite .eye-lens{will-change:transform;}
+html.lite .gift-text{transition-duration:.6s, .5s;}
+html.lite .memory-text{transition-duration:.5s, .45s;}
+
+@media (prefers-reduced-motion:reduce){
+  html.lite #screen-intro.is-settled #bouquet{animation:none; will-change:auto;}
 }

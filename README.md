@@ -64,8 +64,8 @@ salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 
 ## Caché
 
-El HTML enlaza los archivos con `?v=20` y `js/intro.js` imprime
-`build 20` en la consola, para que el navegador no sirva la versión vieja.
+El HTML enlaza los archivos con `?v=23` y `js/intro.js` imprime
+`build 23` en la consola, para que el navegador no sirva la versión vieja.
 
 De eso se encarga el hook `.githooks/pre-commit`: cuando un commit toca
 `css/` o `js/`, sube el número solo. Para activarlo en un clon nuevo:
@@ -78,10 +78,34 @@ git config core.hooksPath .githooks
 
 - **El ramo siempre sale igual.** `bouquet.js` usa un azar semillado
   (`mulberry32`), así que las imperfecciones dibujadas a mano son las mismas
-  en cada carga.
+  en cada carga —y en cualquier aparato: lo que el modo ligero se salta se
+  calcula igualmente, solo que no se dibuja, para no mover la semilla.
 - **Se respeta `prefers-reduced-motion`.** Con esa preferencia activa se
   quitan los pétalos y las motas, las estrellas dejan de titilar y la intro
   salta directa al final.
+- **En el teléfono se enciende el modo ligero.** Un script al principio de
+  `index.html` decide si el aparato es modesto (pantalla pequeña con dedo,
+  poca memoria o pocos núcleos), pone `window.LITE` y la clase `lite` en
+  `<html>`. Con eso:
+
+  - el ramo se dibuja **exactamente igual** —mismo número de pétalos, misma
+    silueta, mismo azar— pero se ahorra lo que a ese tamaño no se distingue:
+    la tinta de las capas interiores, las nervaduras finas y algunas semillas;
+  - en vez de mecer cada tallo, cada hoja y cada cabeza por separado (eran
+    unas 133 animaciones eternas repintando el SVG entero a 60 fps), se mece
+    el ramo completo con un solo `transform`, que la tarjeta gráfica ya tiene
+    guardado. Empieza cuando la entrada termina, con la clase `is-settled`;
+  - el grano se queda quieto, y se van los `backdrop-filter` y el desenfoque
+    al cambiar de pantalla;
+  - el lienzo del fondo dibuja las estrellas una sola vez y luego las copia,
+    usa sellos en vez de crear degradados, y va a ~30 fps.
+
+  En escritorio no cambia nada: el vaivén sigue siendo pieza por pieza.
+
+- **Una pantalla que no se ve no gasta.** Al salir de una pantalla, sus
+  animaciones se pausan y el ramo deja de renderizarse
+  (`content-visibility`). Al volver siguen donde estaban.
+
 - **Se puede saltar la intro** con el botón o tocando el fondo del ramo.
 - **Teclado:** `Esc` vuelve al ramo desde cualquier pantalla. Las flores y las
   cajitas son `<button>`, y las estrellas del cielo llevan `tabindex` y su

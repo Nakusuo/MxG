@@ -5,7 +5,7 @@
   'use strict';
 
   /* para saber de un vistazo si el navegador cargó la versión nueva */
-  if (window.console) console.info('Te hice algo ♡ · build 22');
+  if (window.console) console.info('Te hice algo ♡ · build 23');
 
   var intro = document.getElementById('screen-intro');
   var skipBtn = document.getElementById('skip-btn');
@@ -106,8 +106,14 @@
     }
   }
   frameBouquet();
-  var frameTimer;
+  /* En el móvil la barra de direcciones entra y sale al hacer scroll y
+     eso dispara un "resize" de puro alto. Reencuadrar ahí hacía saltar
+     el ramo, así que solo atendemos cambios de ancho o giros de verdad. */
+  var frameTimer, lastW = window.innerWidth, lastH = window.innerHeight;
   window.addEventListener('resize', function () {
+    var w = window.innerWidth, h = window.innerHeight;
+    if (w === lastW && Math.abs(h - lastH) < 140) return;
+    lastW = w; lastH = h;
     clearTimeout(frameTimer);
     frameTimer = setTimeout(frameBouquet, 150);
   });
@@ -126,6 +132,10 @@
     intro.classList.add('step-invite');
     if (skipBtn) skipBtn.classList.add('gone');
   }, tInvite);
+  /* cuando ya no queda nada por dibujar, el ramo queda quieto.
+     En modo ligero es la señal para que empiece el vaivén de una sola
+     pieza (el SVG entero) en lugar de las de cada tallo y cada hoja. */
+  later(function () { intro.classList.add('is-settled'); }, tInvite + 1400);
 
   /* ---------------------------------------------------
      El menú se abre al tocar "¿Cómo quieres continuar?"
@@ -170,7 +180,7 @@
   function fastForward() {
     timers.forEach(clearTimeout);
     timers = [];
-    intro.classList.add('step-title', 'step-invite');
+    intro.classList.add('step-title', 'step-invite', 'is-settled');
     if (skipBtn) skipBtn.classList.add('gone');
 
     if (typeof document.getAnimations === 'function') {

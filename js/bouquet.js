@@ -8,6 +8,14 @@
 
   var NS = 'http://www.w3.org/2000/svg';
 
+  /* En modo ligero el ramo se dibuja con menos piezas. Se quitan solo las
+     que a tamaño de teléfono no se distinguen: las nervaduras finas de los
+     pétalos, alguna del reverso de las hojas, y la tinta de las capas
+     interiores (que queda tapada). El número de pétalos, la silueta y los
+     colores son exactamente los mismos. */
+  var LITE = !!window.LITE;
+  function q(full, lite) { return LITE ? lite : full; }
+
   /* --- azar semillado: organico pero siempre igual al recargar --- */
   function mulberry32(a) {
     return function () {
@@ -218,20 +226,28 @@
      Es lo que hace que no parezca un vector perfecto. */
   var INK_PETAL = '#3d2130';
   var INK_LEAF = '#20351d';
+  /* Con parent = null se gasta exactamente el mismo azar pero no se dibuja
+     nada. Así el modo ligero puede saltarse trazos sin que el ramo cambie:
+     la semilla fija tiene que producir siempre el mismo ramo. */
   function inkOutline(parent, d, color, width) {
     /* el desplazamiento va en un grupo aparte para que la animación
        del pétalo (que usa transform) no lo pise */
+    var ox = round(rand(-1.7, 1.7)), oy = round(rand(-1.7, 1.7));
+    var rot = round(rand(-1.2, 1.2));
+    var sw = round(width || rand(1.1, 2.1));
+    var op = round(rand(0.26, 0.46));
+    if (!parent) return document.createElementNS(NS, 'path');
+
     var g = el('g', {
-      transform: 'translate(' + round(rand(-1.7, 1.7)) + ',' + round(rand(-1.7, 1.7)) +
-                 ') rotate(' + round(rand(-1.2, 1.2)) + ')'
+      transform: 'translate(' + ox + ',' + oy + ') rotate(' + rot + ')'
     }, parent);
     return el('path', {
       class: 'ink',
       d: d, fill: 'none',
       stroke: color || INK_PETAL,
-      'stroke-width': round(width || rand(1.1, 2.1)),
+      'stroke-width': sw,
       'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-      opacity: round(rand(0.26, 0.46))
+      opacity: op
     }, g);
   }
 
@@ -403,6 +419,7 @@
 
     /* --- cabeza --- */
     var pos = el('g', { class: 'flower-pos', transform: 'translate(' + spec.x + ',' + spec.y + ')' }, g);
+
     var head = el('g', { class: 'flower-head' }, pos);
     head.style.setProperty('--nod', round(rand(0.7, 1.9)) + 'deg');
     head.style.setProperty('--nod-dur', round(rand(5.5, 9.5)) + 's');
@@ -528,19 +545,27 @@
         delay(p, pd);
         if (pd + 1.25 > maxEnd) maxEnd = pd + 1.25;
 
-        /* el trazo de tinta, desplazado como si la mano no hubiera acertado */
-        var ink = inkOutline(pg, d, INK_PETAL, rand(1, 2));
+        /* el trazo de tinta, desplazado como si la mano no hubiera acertado.
+           En ligero solo la capa de fuera: las de dentro quedan tapadas
+           por los pétalos que vienen encima y no se llegan a ver. */
+        var ink = inkOutline((LITE && li > 0) ? null : pg, d, INK_PETAL, rand(1, 2));
         ink.setAttribute('class', 'petal ink');
         delay(ink, pd);
 
-        /* nervadura suave, solo en la capa exterior */
+        /* nervadura suave, solo en la capa exterior.
+           El trazado se calcula siempre, aunque en ligero no se dibuje:
+           así se gasta el mismo azar y el ramo sale idéntico en todas
+           las pantallas, que es la gracia de la semilla fija. */
         if (li > 0) continue;
-        var vein = el('path', {
-          class: 'petal',
-          d: 'M' + round(rand(-w * 0.1, w * 0.1)) + ',' + round(-h * 0.1) +
+        var veinD = 'M' + round(rand(-w * 0.1, w * 0.1)) + ',' + round(-h * 0.1) +
              ' Q' + round(rand(-w * 0.16, w * 0.16)) + ',' + round(-h * 0.5) +
-             ' ' + round(rand(-w * 0.1, w * 0.1)) + ',' + round(-h * rand(0.72, 0.86)),
-          stroke: INK_PETAL, 'stroke-width': round(rand(0.8, 1.3)), opacity: round(rand(0.12, 0.26)),
+             ' ' + round(rand(-w * 0.1, w * 0.1)) + ',' + round(-h * rand(0.72, 0.86));
+        var veinW = round(rand(0.8, 1.3));
+        var veinO = round(rand(0.12, 0.26));
+        if (LITE) continue;
+        var vein = el('path', {
+          class: 'petal', d: veinD,
+          stroke: INK_PETAL, 'stroke-width': veinW, opacity: veinO,
           fill: 'none', 'stroke-linecap': 'round', 'pointer-events': 'none'
         }, pg);
         delay(vein, pd);
@@ -567,7 +592,7 @@
     el('path', { d: discD, fill: '#3a2213' }, disc);
     inkOutline(disc, discD, '#241426', rand(1.4, 2.4)).setAttribute('opacity', 0.45);
 
-    var seeds = Math.round(dr * 1.5);
+    var seeds = Math.round(dr * q(1.5, 1.25));
     var golden = Math.PI * (3 - Math.sqrt(5));
     for (var k = 0; k < seeds; k++) {
       var rr = dr * 0.93 * Math.sqrt((k + 0.5) / seeds);
@@ -828,8 +853,8 @@
           fill: 'none', stroke: leafGreen.vein, 'stroke-width': round(rand(1.4, 2.2)),
           opacity: round(rand(0.35, 0.6)), 'stroke-linecap': 'round'
         }, inner);
-        for (var v = 1; v <= 3; v++) {
-          var vx = L * (0.16 + v * 0.2);
+        for (var v = 1; v <= q(3, 2); v++) {
+          var vx = L * (0.16 + v * q(0.2, 0.27));
           el('path', {
             d: 'M' + round(vx * 0.9) + ',' + round(-W * 0.05) + ' Q' + round(vx) + ',' + round(-W * 0.42) +
                ' ' + round(vx + L * 0.11) + ',' + round(-W * 0.52),

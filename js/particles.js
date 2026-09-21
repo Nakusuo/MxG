@@ -1,6 +1,14 @@
 /* =========================================================
    particles.js — polvo de estrellas, motas cálidas y pétalos
    Un lienzo detrás de todo, muy lento, casi imperceptible.
+
+   En modo ligero (teléfonos) el trabajo por fotograma baja mucho:
+   · las estrellas se pintan UNA vez en un lienzo aparte y luego
+     solo se copian, en vez de redibujarse titilando una por una;
+   · las motas usan un sello ya dibujado en vez de crear un
+     degradado radial nuevo cada vez (eran ~46 por fotograma);
+   · se dibuja a ~33 ms en lugar de a 16;
+   · se para del todo cuando encima hay una pantalla opaca.
    ========================================================= */
 (function () {
   'use strict';
@@ -10,15 +18,67 @@
   var ctx = canvas.getContext('2d');
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var LITE = !!window.LITE;
 
   var W = 0, H = 0, dpr = 1;
   var stars = [], motes = [], petals = [];
-  var running = true, raf = null, last = 0;
+  var raf = null, lastDraw = 0;
+  var covered = false;
+
+  var STEP = LITE ? 30 : 0;          /* ms mínimos entre fotogramas */
+
+  var STAR_COL = { rose: '#ffc4da', gold: '#ffe096', cool: '#e2f0eb' };
+  var STAR_HALO = { rose: '#ff96be', gold: '#ffce6e', cool: '#b4dcc8' };
+  var HALO_A = { rose: 0.14, gold: 0.13, cool: 0.10 };
 
   function rand(a, b) { return a + Math.random() * (b - a); }
 
+  /* ---------- sellos: se dibujan una vez y se copian ---------- */
+  function moteStamp(rose) {
+    var size = 64, c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    var grd = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    grd.addColorStop(0, rose ? 'rgba(255,176,208,1)' : 'rgba(255,218,138,1)');
+    grd.addColorStop(1, rose ? 'rgba(240,130,180,0)' : 'rgba(255,190,90,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+  var STAMP_ROSE = moteStamp(true);
+  var STAMP_GOLD = moteStamp(false);
+
+  /* el cielo quieto: en ligero se hornea aquí y luego solo se copia */
+  var sky = null;
+
+  function paintStar(g, s, alpha) {
+    g.globalAlpha = alpha;
+    g.fillStyle = STAR_COL[s.kind];
+    g.beginPath();
+    g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    g.fill();
+    if (s.r > 1.25) {
+      g.globalAlpha = alpha * HALO_A[s.kind];
+      g.fillStyle = STAR_HALO[s.kind];
+      g.beginPath();
+      g.arc(s.x, s.y, s.r * 5.5, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function bakeSky() {
+    sky = document.createElement('canvas');
+    sky.width = Math.max(1, Math.floor(W * dpr));
+    sky.height = Math.max(1, Math.floor(H * dpr));
+    var g = sky.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (var i = 0; i < stars.length; i++) paintStar(g, stars[i], stars[i].a);
+    g.globalAlpha = 1;
+  }
+
+  /* ---------- medidas ---------- */
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, LITE ? 1.5 : 2);
     W = window.innerWidth;
     H = window.innerHeight;
     canvas.width = Math.floor(W * dpr);
@@ -27,13 +87,16 @@
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     seed();
+    if (LITE) bakeSky();
   }
 
   function seed() {
     var area = W * H;
+    /* en ligero las estrellas no cuestan por fotograma (van horneadas),
+       así que se mantiene la densidad. Lo que se recorta es lo que se mueve. */
     var nStars = Math.round(Math.min(150, area / 9000));
-    var nMotes = Math.round(Math.min(46, area / 26000));
-    var nPetals = reduce ? 0 : Math.round(Math.min(16, area / 78000));
+    var nMotes = Math.round(Math.min(LITE ? 18 : 46, area / (LITE ? 52000 : 26000)));
+    var nPetals = reduce ? 0 : Math.round(Math.min(LITE ? 7 : 16, area / (LITE ? 150000 : 78000)));
 
     stars = [];
     for (var i = 0; i < nStars; i++) {
@@ -90,39 +153,28 @@
 
   function draw(now) {
     raf = requestAnimationFrame(draw);
-    if (!last) last = now;
-    var dt = Math.min(64, now - last);
-    last = now;
+
+    /* en ligero se salta un fotograma de cada dos: el polvo va tan lento
+       que no se nota, y el teléfono respira */
+    if (STEP && now - lastDraw < STEP) return;
+    var dt = Math.min(64, lastDraw ? now - lastDraw : 16);
+    lastDraw = now;
     var t = now / 1000;
 
     ctx.clearRect(0, 0, W, H);
 
     /* --- estrellas --- */
-    for (var i = 0; i < stars.length; i++) {
-      var s = stars[i];
-      if (t < s.born) continue;
-      var appear = Math.min(1, (t - s.born) / 1.8);
-      var tw = reduce ? 1 : 0.62 + 0.38 * Math.sin(t * s.tw + s.ph);
-      var alpha = s.a * tw * appear;
-      ctx.beginPath();
-      ctx.fillStyle = s.kind === 'rose'
-        ? 'rgba(255, 196, 218, ' + alpha.toFixed(3) + ')'
-        : (s.kind === 'gold'
-          ? 'rgba(255, 224, 150, ' + alpha.toFixed(3) + ')'
-          : 'rgba(226, 240, 235, ' + alpha.toFixed(3) + ')');
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (s.r > 1.25) {
-        ctx.beginPath();
-        ctx.fillStyle = s.kind === 'rose'
-          ? 'rgba(255, 150, 190, ' + (alpha * 0.14).toFixed(3) + ')'
-          : (s.kind === 'gold'
-            ? 'rgba(255, 206, 110, ' + (alpha * 0.13).toFixed(3) + ')'
-            : 'rgba(180, 220, 200, ' + (alpha * 0.1).toFixed(3) + ')');
-        ctx.arc(s.x, s.y, s.r * 5.5, 0, Math.PI * 2);
-        ctx.fill();
+    if (sky) {
+      ctx.drawImage(sky, 0, 0, W, H);
+    } else {
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        if (t < s.born) continue;
+        var appear = Math.min(1, (t - s.born) / 1.8);
+        var tw = reduce ? 1 : 0.62 + 0.38 * Math.sin(t * s.tw + s.ph);
+        paintStar(ctx, s, s.a * tw * appear);
       }
+      ctx.globalAlpha = 1;
     }
 
     if (reduce) return;
@@ -137,16 +189,11 @@
       if (m.x > W + 30) m.x = -20;
 
       var ma = m.a * (0.55 + 0.45 * Math.sin(t * m.sp * 1.6 + m.ph));
-      var grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 6);
-      grd.addColorStop(0, m.rose
-        ? 'rgba(255, 176, 208, ' + (ma * 0.8).toFixed(3) + ')'
-        : 'rgba(255, 218, 138, ' + (ma * 0.85).toFixed(3) + ')');
-      grd.addColorStop(1, m.rose ? 'rgba(240, 130, 180, 0)' : 'rgba(255, 190, 90, 0)');
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, m.r * 6, 0, Math.PI * 2);
-      ctx.fill();
+      var d = m.r * 12;
+      ctx.globalAlpha = Math.max(0, Math.min(1, ma * 0.85));
+      ctx.drawImage(m.rose ? STAMP_ROSE : STAMP_GOLD, m.x - d / 2, m.y - d / 2, d, d);
     }
+    ctx.globalAlpha = 1;
 
     /* --- pequeños pétalos flotando --- */
     for (var k = 0; k < petals.length; k++) {
@@ -173,8 +220,8 @@
   }
 
   function start() {
-    if (raf) return;
-    last = 0;
+    if (raf || covered || document.hidden) return;
+    lastDraw = 0;
     raf = requestAnimationFrame(draw);
   }
   function stop() {
@@ -182,13 +229,36 @@
     raf = null;
   }
 
-  var rt;
+  /* ---------- reencuadre ----------
+     En el móvil la barra de direcciones aparece y desaparece al hacer
+     scroll y dispara un "resize" de puro alto. Si volviéramos a sembrar
+     en cada uno, el fondo daría un tirón. Solo reaccionamos a cambios
+     de ancho o a saltos de alto de verdad (girar el teléfono). */
+  var rt, lastW = window.innerWidth, lastH = window.innerHeight;
   window.addEventListener('resize', function () {
+    var w = window.innerWidth, h = window.innerHeight;
+    if (w === lastW && Math.abs(h - lastH) < 140) return;
+    lastW = w; lastH = h;
     clearTimeout(rt);
     rt = setTimeout(resize, 180);
   });
+
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) stop(); else start();
+  });
+
+  /* el cielo y la última pantalla tapan el lienzo por completo:
+     mientras ella está ahí, no hay nada que pintar */
+  var OPAQUE = { 'screen-cielo': 1, 'screen-final': 1 };
+  var coverTimer;
+  document.addEventListener('screen:enter', function (e) {
+    clearTimeout(coverTimer);
+    if (OPAQUE[e.detail.id]) {
+      coverTimer = setTimeout(function () { covered = true; stop(); }, 2800);
+    } else {
+      covered = false;
+      start();
+    }
   });
 
   resize();

@@ -221,14 +221,17 @@
       var txt = make('div', 'memory-body', b);
       var label = make('span', 'memory-label', txt);
       label.textContent = m.label;
+      /* el texto va dentro de otro span: el de fuera es el que se abre
+         (grid-template-rows) y el de dentro el que se recorta */
       var para = make('span', 'memory-text', txt);
+      var paraIn = make('span', 'memory-text-in', para);
       if (m.fill) {
-        para.appendChild(document.createTextNode(m.text));
-        var mark = make('span', 'fill-me', para);
+        paraIn.appendChild(document.createTextNode(m.text));
+        var mark = make('span', 'fill-me', paraIn);
         mark.textContent = m.fill;
-        para.appendChild(document.createTextNode(m.after || ''));
+        paraIn.appendChild(document.createTextNode(m.after || ''));
       } else {
-        para.textContent = m.text;
+        paraIn.textContent = m.text;
       }
       var hint = make('span', 'memory-hint', b);
       hint.textContent = 'tócame';
@@ -342,8 +345,9 @@
       label.textContent = gift.label;
 
       var text = make('div', 'gift-text', body);
+      var textIn = make('div', 'gift-text-in', text);
       gift.paras.forEach(function (para, k) {
-        var p = make('p', 'gift-para' + (gift.strong.indexOf(k) >= 0 ? ' gift-strong' : ''), text);
+        var p = make('p', 'gift-para' + (gift.strong.indexOf(k) >= 0 ? ' gift-strong' : ''), textIn);
         lines(p, para);
       });
 
@@ -557,8 +561,8 @@
       });
     }
     place();
-    if (narrow && narrow.addEventListener) narrow.addEventListener('change', place);
-    else window.addEventListener('resize', place);
+    if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { place(); forget(); });
+    else window.addEventListener('resize', function () { place(); forget(); });
 
     var reveal = make('button', 'mini-btn reveal-all', null);
     reveal.type = 'button';
@@ -568,14 +572,26 @@
     var found = 0;
     var pending = null;
 
-    function apply(px, py) {
-      var box = host.getBoundingClientRect();
-      var R = Math.max(150, Math.min(box.width, box.height) * 0.42);
+    /* Medir cuesta: pedir la posición de cada palabra obliga al navegador
+       a recalcular la página. Antes se hacía diez veces por cada pixel que
+       se movía el dedo. Ahora se mide una vez y se guarda; solo se vuelve
+       a medir si algo pudo cambiar de sitio (girar, scroll, recolocar). */
+    var box = null, R = 150;
+    function measure() {
+      box = host.getBoundingClientRect();
+      R = Math.max(150, Math.min(box.width, box.height) * 0.42);
       nodes.forEach(function (n) {
         var b = n.el.getBoundingClientRect();
-        var cx = b.left - box.left + b.width / 2;
-        var cy = b.top - box.top + b.height / 2;
-        var dist = Math.hypot(cx - px, cy - py);
+        n.cx = b.left - box.left + b.width / 2;
+        n.cy = b.top - box.top + b.height / 2;
+      });
+    }
+    function forget() { box = null; }
+
+    function apply(px, py) {
+      if (!box) measure();
+      nodes.forEach(function (n) {
+        var dist = Math.hypot(n.cx - px, n.cy - py);
         var k = Math.max(0, 1 - dist / R);
         var o = n.found ? Math.max(0.22, k) : k;
         n.el.style.opacity = o.toFixed(3);
@@ -592,13 +608,13 @@
     }
 
     function move(e) {
-      var box = host.getBoundingClientRect();
+      if (!box) measure();
       var p = e.touches ? e.touches[0] : e;
       var px = p.clientX - box.left;
       var py = p.clientY - box.top;
       if (lens) {
         lens.style.opacity = '1';
-        lens.style.transform = 'translate(' + px + 'px,' + py + 'px)';
+        lens.style.transform = 'translate3d(' + px + 'px,' + py + 'px,0)';
       }
       if (hint) hint.classList.add('faded');
       if (pending) cancelAnimationFrame(pending);
@@ -613,11 +629,19 @@
       });
     }
 
-    host.addEventListener('mousemove', move);
+    host.addEventListener('mousemove', move, { passive: true });
     host.addEventListener('mouseleave', leave);
     host.addEventListener('touchstart', function (e) { move(e); }, { passive: true });
     host.addEventListener('touchmove', function (e) { move(e); }, { passive: true });
     host.addEventListener('touchend', leave);
+
+    /* lo que invalida las medidas guardadas */
+    var screenEl = document.getElementById('screen-mirada');
+    if (screenEl) screenEl.addEventListener('scroll', forget, { passive: true });
+    window.addEventListener('resize', forget, { passive: true });
+    document.addEventListener('screen:enter', function (e) {
+      if (e.detail.id === 'screen-mirada') forget();
+    });
 
     function finish() {
       setTimeout(function () {
@@ -684,4 +708,5 @@
       }
     });
   })();
+
 })();
