@@ -1190,7 +1190,8 @@ html.lite #screen-intro.is-playing .glow{
 }
 
 /* el ramo entero respira: un solo transform, compuesto en GPU */
-html.lite #screen-intro.is-settled #bouquet{
+html.lite #screen-intro.is-settled:not(.sprited) #bouquet,
+html.lite #screen-intro.is-settled.sprited #bq-sprites{
   transform-origin:50% 100%;
   will-change:transform;
   animation:bqBreeze 11s ease-in-out infinite;
@@ -1204,6 +1205,38 @@ html.lite .eye-lens{will-change:transform;}
 html.lite .gift-text{transition-duration:.6s, .5s;}
 html.lite .memory-text{transition-duration:.5s, .45s;}
 
+/* ---------- el ramo en trozos (teléfonos) ----------
+   El SVG queda escondido y sin animar; se ven los lienzos. */
+html.lite #screen-intro.sprited #bouquet{visibility:hidden;}
+html.lite #screen-intro.sprited #bouquet *{animation:none !important;}
+
+#bq-sprites{position:absolute; z-index:1; pointer-events:none;}
+#bq-sprites canvas{position:absolute; left:0; top:0; display:block;}
+
+/* los tallos crecen de abajo arriba: la caja sube y el dibujo baja lo
+   mismo, así se destapa sin repintar nada */
+.spr-grow{position:absolute; inset:0; overflow:hidden;}
+.spr-grow.anim{animation:sprUp var(--dur,2s) var(--dl,0s) cubic-bezier(.32,.72,.32,1) both;}
+.spr-grow.anim > canvas{animation:sprDown var(--dur,2s) var(--dl,0s) cubic-bezier(.32,.72,.32,1) both;}
+@keyframes sprUp{from{transform:translate3d(0,100%,0);} to{transform:translate3d(0,0,0);}}
+@keyframes sprDown{from{transform:translate3d(0,-100%,0);} to{transform:translate3d(0,0,0);}}
+
+/* cada flor se abre entera, con el mismo rebote que los pétalos */
+.spr-head.anim{animation:sprBloom 1.35s var(--dl,0s) var(--ease-elastic) both;}
+@keyframes sprBloom{
+  0%{opacity:0; transform:scale(.12) rotate(-16deg);}
+  30%{opacity:1;}
+  100%{opacity:1; transform:scale(1) rotate(0deg);}
+}
+
+/* hojas grandes y lazo */
+.spr-wrap.anim{animation:sprRise 1.3s var(--dl,0s) var(--ease-soft) both;}
+@keyframes sprRise{
+  from{opacity:0; transform:translate3d(0,26px,0);}
+  to{opacity:1; transform:translate3d(0,0,0);}
+}
+
 @media (prefers-reduced-motion:reduce){
-  html.lite #screen-intro.is-settled #bouquet{animation:none; will-change:auto;}
+  html.lite #screen-intro.is-settled #bouquet,
+  html.lite #screen-intro.is-settled #bq-sprites{animation:none; will-change:auto;}
 }

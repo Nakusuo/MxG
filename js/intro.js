@@ -5,7 +5,7 @@
   'use strict';
 
   /* para saber de un vistazo si el navegador cargó la versión nueva */
-  if (window.console) console.info('Te hice algo ♡ · build 23');
+  if (window.console) console.info('Te hice algo ♡ · build 24');
 
   var intro = document.getElementById('screen-intro');
   var skipBtn = document.getElementById('skip-btn');
@@ -117,6 +117,56 @@
     clearTimeout(frameTimer);
     frameTimer = setTimeout(frameBouquet, 150);
   });
+
+  /* ---------------------------------------------------
+     Teléfonos: el ramo en trozos (ver Bouquet.sprite)
+     El SVG se queda escondido y quieto; lo que se ve y se anima son
+     lienzos ya pintados, que la GPU mueve sin repintar.
+     Si algo falla al pintarlos, se vuelve al SVG de siempre.
+     --------------------------------------------------- */
+  var useSprites = !!(window.LITE && window.Bouquet && window.Bouquet.sprite &&
+    window.Blob && window.URL && window.XMLSerializer && stageEl);
+  var spriteGen = 0, spriteSize = '', spriteDirty = false, spriteTimer;
+
+  function stageSize() {
+    var r = stageEl.getBoundingClientRect();
+    return Math.round(r.width) + 'x' + Math.round(r.height);
+  }
+  function resprite(first) {
+    var gen = ++spriteGen;
+    spriteSize = stageSize();
+    return window.Bouquet.sprite({
+      stale: function () { return gen !== spriteGen; }
+    }).catch(function (err) {
+      if (first) intro.classList.remove('sprited');
+      if (window.console) console.warn('El ramo en trozos falló; se usa el SVG:', err);
+    });
+  }
+
+  if (useSprites) {
+    intro.classList.add('sprited');
+    resprite(true);
+
+    /* cuando cambia el hueco del ramo (carga la tipografía del título,
+       se gira el teléfono) los trozos se vuelven a pintar en su sitio */
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () {
+        if (stageSize() === spriteSize) return;
+        clearTimeout(spriteTimer);
+        spriteTimer = setTimeout(function () {
+          if (!intro.classList.contains('is-active')) { spriteDirty = true; return; }
+          frameBouquet();
+          resprite(false);
+        }, 200);
+      }).observe(stageEl);
+    }
+    document.addEventListener('screen:enter', function (e) {
+      if (e.detail.id !== 'screen-intro' || !spriteDirty) return;
+      spriteDirty = false;
+      frameBouquet();
+      resprite(false);
+    });
+  }
 
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {

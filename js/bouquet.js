@@ -294,9 +294,12 @@
   /* =======================================================
      CONSTRUCCIÓN
      ======================================================= */
+  var t0 = 0;
+
   function build() {
     var svg = document.getElementById('bouquet');
     if (!svg) return 0;
+    t0 = performance.now();
 
     var defs = document.getElementById('bq-defs');
     var back = document.getElementById('bq-back');
@@ -389,13 +392,13 @@
 
     /* sombra del tallo, para dar volumen */
     el('path', {
-      d: d, class: 'stem', stroke: green.dark,
+      d: d, class: 'stem', fill: 'none', stroke: green.dark,
       'stroke-width': round(width + 2.4), opacity: 0.55,
       style: '--d:' + round(stemDelay) + 's'
     }, g);
 
     var stem = el('path', {
-      d: d, class: 'stem', stroke: 'url(#lg' + (order % GREENS.length) + ')',
+      d: d, class: 'stem', fill: 'none', stroke: 'url(#lg' + (order % GREENS.length) + ')',
       'stroke-width': round(width),
       style: '--d:' + round(stemDelay) + 's'
     }, g);
@@ -403,7 +406,7 @@
 
     /* brillo lateral del tallo */
     el('path', {
-      d: d, class: 'stem', stroke: green.vein,
+      d: d, class: 'stem', fill: 'none', stroke: green.vein,
       'stroke-width': round(width * 0.26), opacity: 0.4,
       transform: 'translate(' + round(-width * 0.24) + ',0)',
       style: '--d:' + round(stemDelay + 0.1) + 's'
@@ -427,6 +430,14 @@
 
     var budDelay = T.budStart + order * T.budStep;
     var openDelay = T.openStart + order * T.openStep;
+
+    /* lo que necesita el modo sprites para recortar esta cabeza y saber
+       cuándo abrirla: centro, medio lado del recorte (incluye el resplandor)
+       y momento de entrada */
+    pos.setAttribute('data-x', spec.x);
+    pos.setAttribute('data-y', spec.y);
+    pos.setAttribute('data-half', round(spec.r * (isBud ? 1.55 : small ? 2.2 : 1.95)));
+    pos.setAttribute('data-at', round(isBud ? budDelay : openDelay - 0.35));
 
     if (isBud) {
       buildBud(head, spec.r, budDelay, green);
@@ -476,7 +487,7 @@
 
     /* resplandor detrás: una mancha, no un halo perfecto */
     var glow = el('ellipse', {
-      class: 'glow', cx: round(rand(-r * 0.1, r * 0.1)), cy: round(rand(-r * 0.1, r * 0.1)),
+      class: 'glow', opacity: 0.85, cx: round(rand(-r * 0.1, r * 0.1)), cy: round(rand(-r * 0.1, r * 0.1)),
       rx: round(r * rand(1.5, 1.8)), ry: round(r * rand(1.35, 1.7)),
       transform: 'rotate(' + round(rand(0, 180)) + ')',
       fill: spec.rose ? 'url(#glowRose)' : 'url(#glowGrad)'
@@ -634,7 +645,7 @@
     head = tiltHead(head);
 
     var glow = el('ellipse', {
-      class: 'glow', cx: 0, cy: 0,
+      class: 'glow', opacity: 0.85, cx: 0, cy: 0,
       rx: round(r * rand(1.4, 1.7)), ry: round(r * rand(1.3, 1.6)),
       transform: 'rotate(' + round(rand(0, 180)) + ')',
       fill: 'url(#glowRose)'
@@ -732,7 +743,7 @@
     head = tiltHead(head);
 
     var glow = el('ellipse', {
-      class: 'glow', cx: 0, cy: 0,
+      class: 'glow', opacity: 0.85, cx: 0, cy: 0,
       rx: round(r * rand(1.7, 2.1)), ry: round(r * rand(1.6, 2)),
       transform: 'rotate(' + round(rand(0, 180)) + ')',
       fill: 'url(#glowRose)'
@@ -964,5 +975,160 @@
     return end;
   }
 
-  window.Bouquet = { build: build, T: T };
+
+  /* =======================================================
+     MODO SPRITES (teléfonos)
+     Animar el SVG obliga al teléfono a repintar el ramo entero, con sus
+     3.000 piezas, en cada fotograma: por eso la entrada iba a trompicones.
+     Aquí el ramo se pinta UNA vez, en trozos (tallos de atrás, cada cabeza,
+     tallos de delante, lazo), cada trozo en su propio lienzo. Luego solo se
+     mueven esos lienzos con transform, que la tarjeta gráfica hace sin
+     repintar nada. El dibujo es exactamente el mismo: sale del mismo SVG.
+
+     Devuelve una promesa. Si algo falla, quien llama vuelve al SVG.
+     ======================================================= */
+  function sprite(opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      var svg = document.getElementById('bouquet');
+      var stage = document.getElementById('stage');
+      var intro = document.getElementById('screen-intro');
+      if (!svg || !stage) return reject(new Error('no hay ramo'));
+
+      var box = svg.getBoundingClientRect();
+      var sbox = stage.getBoundingClientRect();
+      var ctm = svg.getScreenCTM();
+      if (!box.width || !box.height || !ctm || !ctm.a) return reject(new Error('el ramo no tiene medidas'));
+
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var W = box.width, H = box.height;
+      var FW = Math.max(1, Math.round(W * dpr)), FH = Math.max(1, Math.round(H * dpr));
+      var ser = new XMLSerializer();
+      var defs = ser.serializeToString(document.getElementById('bq-defs'));
+      var vb = svg.getAttribute('viewBox');
+      var par = svg.getAttribute('preserveAspectRatio') || 'xMidYMax meet';
+
+      function doc(inner, viewBox, w, h, ar) {
+        return '<svg xmlns="' + NS + '" viewBox="' + viewBox + '" width="' + w + '" height="' + h +
+          '" preserveAspectRatio="' + ar + '">' + defs + inner + '</svg>';
+      }
+      /* una capa de tallos y hojas, sin las cabezas (esas van aparte) */
+      function stems(id) {
+        var c = document.getElementById(id).cloneNode(true);
+        var heads = c.querySelectorAll('.flower-pos');
+        for (var i = 0; i < heads.length; i++) heads[i].parentNode.removeChild(heads[i]);
+        return doc(ser.serializeToString(c), vb, FW, FH, par);
+      }
+
+      var specs = [];
+      function heads(id) {
+        var list = document.querySelectorAll('#' + id + ' .flower-pos');
+        for (var i = 0; i < list.length; i++) {
+          var pos = list[i];
+          var x = +pos.getAttribute('data-x'), y = +pos.getAttribute('data-y');
+          var half = +pos.getAttribute('data-half');
+          if (!half) continue;
+          var ux = x - half, uy = y - half, us = half * 2;
+          var size = ctm.a * us;
+          var cs = Math.max(1, Math.round(size * dpr));
+          specs.push({
+            type: 'head',
+            str: doc(ser.serializeToString(pos), ux + ' ' + uy + ' ' + us + ' ' + us, cs, cs, 'none'),
+            cw: cs, ch: cs,
+            left: ctm.a * ux + ctm.e - box.left,
+            top: ctm.d * uy + ctm.f - box.top,
+            size: size,
+            dl: +pos.getAttribute('data-at')
+          });
+        }
+      }
+
+      var nBack = document.querySelectorAll('#bq-back > .stalk').length;
+      var nFront = document.querySelectorAll('#bq-front > .stalk').length;
+
+      /* mismo orden de apilado que el SVG: atrás, sus cabezas, delante,
+         sus cabezas, y el lazo por encima de todo */
+      specs.push({ type: 'stems', str: stems('bq-back'), cw: FW, ch: FH,
+                   dl: T.stemStart, dur: nBack * T.stemStep + T.stemDur });
+      heads('bq-back');
+      specs.push({ type: 'stems', str: stems('bq-front'), cw: FW, ch: FH,
+                   dl: T.stemStart + nBack * T.stemStep, dur: nFront * T.stemStep + T.stemDur });
+      heads('bq-front');
+      specs.push({ type: 'wrap', str: doc(ser.serializeToString(document.getElementById('bq-wrap')), vb, FW, FH, par),
+                   cw: FW, ch: FH, dl: T.leafStart + 0.5 });
+
+      function raster(spec) {
+        return new Promise(function (ok, ko) {
+          var url = URL.createObjectURL(new Blob([spec.str], { type: 'image/svg+xml' }));
+          var img = new Image();
+          img.onload = function () {
+            var c = document.createElement('canvas');
+            c.width = spec.cw; c.height = spec.ch;
+            c.getContext('2d').drawImage(img, 0, 0, spec.cw, spec.ch);
+            URL.revokeObjectURL(url);
+            ok(c);
+          };
+          img.onerror = function () { URL.revokeObjectURL(url); ko(new Error('no se pudo pintar un trozo')); };
+          img.src = url;
+        });
+      }
+
+      Promise.all(specs.map(raster)).then(function (canvases) {
+        /* si mientras se pintaba cambió el tamaño y ya hay otro pintado
+           en marcha, este llega tarde: no pisa al nuevo */
+        if (opts.stale && opts.stale()) return resolve();
+        var host = document.getElementById('bq-sprites');
+        if (!host) {
+          host = document.createElement('div');
+          host.id = 'bq-sprites';
+          host.setAttribute('aria-hidden', 'true');
+          stage.appendChild(host);
+        }
+        host.style.left = (box.left - sbox.left) + 'px';
+        host.style.top = (box.top - sbox.top) + 'px';
+        host.style.width = W + 'px';
+        host.style.height = H + 'px';
+
+        /* si ya terminó (o ella saltó la intro mientras se pintaba),
+           los trozos aparecen quietos en su sitio; si no, la animación
+           retoma por donde iría el reloj del ramo */
+        var animate = !opts.still && !(intro && intro.classList.contains('is-settled'));
+        var elapsed = (performance.now() - t0) / 1000;
+        var frag = document.createDocumentFragment();
+
+        specs.forEach(function (spec, i) {
+          var c = canvases[i], node = c;
+          if (spec.type === 'head') {
+            c.className = 'spr-head';
+            c.style.left = spec.left + 'px';
+            c.style.top = spec.top + 'px';
+            c.style.width = c.style.height = spec.size + 'px';
+          } else {
+            c.style.width = W + 'px';
+            c.style.height = H + 'px';
+            if (spec.type === 'wrap') c.className = 'spr-wrap';
+          }
+          if (spec.type === 'stems') {
+            /* crecer de abajo arriba sin repintar: la caja sube y el
+               dibujo baja lo mismo, así solo se ve la parte ya "crecida" */
+            node = document.createElement('div');
+            node.className = 'spr-grow';
+            node.style.setProperty('--dur', spec.dur.toFixed(2) + 's');
+            node.appendChild(c);
+          }
+          if (animate) {
+            node.classList.add('anim');
+            node.style.setProperty('--dl', (spec.dl - elapsed).toFixed(2) + 's');
+          }
+          frag.appendChild(node);
+        });
+
+        host.textContent = '';
+        host.appendChild(frag);
+        resolve();
+      }, reject);
+    });
+  }
+
+  window.Bouquet = { build: build, sprite: sprite, T: T };
 })();

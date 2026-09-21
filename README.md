@@ -64,8 +64,8 @@ salto de línea se usa `\n` dentro de la cadena, no `<br>`.
 
 ## Caché
 
-El HTML enlaza los archivos con `?v=23` y `js/intro.js` imprime
-`build 23` en la consola, para que el navegador no sirva la versión vieja.
+El HTML enlaza los archivos con `?v=24` y `js/intro.js` imprime
+`build 24` en la consola, para que el navegador no sirva la versión vieja.
 
 De eso se encarga el hook `.githooks/pre-commit`: cuando un commit toca
 `css/` o `js/`, sube el número solo. Para activarlo en un clon nuevo:
@@ -91,6 +91,14 @@ git config core.hooksPath .githooks
   - el ramo se dibuja **exactamente igual** —mismo número de pétalos, misma
     silueta, mismo azar— pero se ahorra lo que a ese tamaño no se distingue:
     la tinta de las capas interiores, las nervaduras finas y algunas semillas;
+  - **la entrada no anima el SVG.** Animar ~1.000 piezas dentro de un SVG
+    obliga al teléfono a repintar el ramo entero en cada fotograma, y la
+    entrada iba a trompicones. En su lugar, `Bouquet.sprite()` pinta el ramo
+    una sola vez en trozos —tallos de atrás, cada cabeza, tallos de delante,
+    lazo—, cada uno en su propio `<canvas>`, y lo que se anima son esos
+    lienzos con `transform`, que la GPU mueve sin repintar. Los tallos crecen
+    de abajo arriba y cada flor se abre entera. El SVG queda escondido
+    (clase `sprited`); si algo falla al pintar los trozos, se vuelve a él;
   - en vez de mecer cada tallo, cada hoja y cada cabeza por separado (eran
     unas 133 animaciones eternas repintando el SVG entero a 60 fps), se mece
     el ramo completo con un solo `transform`, que la tarjeta gráfica ya tiene
