@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Te hice algo ♡</title>
 <meta name="description" content="Un pequeño lugar hecho a mano.">
+<meta name="theme-color" content="#2f3aa6">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Parisienne&family=Patrick+Hand&family=Gloria+Hallelujah&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css?v=26">
 <script>
 /* Modo ligero: en teléfonos y equipos modestos bajamos el detalle del ramo,
@@ -27,14 +28,12 @@
   if (lite) document.documentElement.className += ' lite';
 })();
 </script>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23e87cac'/><circle cx='50' cy='50' r='16' fill='%234a2331'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='16' y='16' width='76' height='76' fill='%23101014'/><rect x='8' y='8' width='76' height='76' fill='%232f3aa6' stroke='%23101014' stroke-width='6'/><text x='46' y='64' font-size='46' text-anchor='middle' fill='%23ffd21e' font-family='Arial Black,Arial,sans-serif'>♡</text></svg>">
 </head>
 <body>
 
-<div class="ground" aria-hidden="true"></div>
-<canvas id="particles" aria-hidden="true"></canvas>
+<div id="wall" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
-<div class="vignette" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- ============ PANTALLA 1 · EL RAMO ============ -->
@@ -42,7 +41,11 @@
   <button class="skip" id="skip-btn" type="button">saltar la animación</button>
 
   <header class="intro-top">
-    <h1 class="title" id="title">Te hice algo <span class="heart">♡</span></h1>
+    <h1 class="title" id="title" aria-label="Te hice algo">
+      <span class="word" aria-hidden="true"><span class="cut k-red" style="--r:-5deg;--i:0">T</span><span class="cut k-mark" style="--r:4deg;--i:1">e</span></span>
+      <span class="word" aria-hidden="true"><span class="cut k-yellow" style="--r:-2deg;--i:2">H</span><span class="cut k-ink" style="--r:5deg;--i:3">I</span><span class="cut k-pink k-mark" style="--r:-6deg;--i:4">c</span><span class="cut k-white" style="--r:2deg;--i:5">E</span></span>
+      <span class="word" aria-hidden="true"><span class="cut" style="--r:3deg;--i:6">A</span><span class="cut k-red" style="--r:-3deg;--i:7">L</span><span class="cut k-yellow k-mark" style="--r:6deg;--i:8">g</span><span class="cut k-white" style="--r:-2deg;--i:9">O</span><span class="heart">♥</span></span>
+    </h1>
   </header>
 
   <div class="stage" id="stage" aria-hidden="true">
@@ -221,7 +224,7 @@
   </div>
 </section>
 
-<script src="js/particles.js?v=26"></script>
+<script src="js/backdrop.js?v=26"></script>
 <script src="js/bouquet.js?v=26"></script>
 <script src="js/intro.js?v=26"></script>
 <script src="js/sections.js?v=26"></script>

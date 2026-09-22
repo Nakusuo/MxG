@@ -2,6 +2,8 @@
 
 Un pequeño sitio hecho a mano: un ramo de girasoles dibujado en SVG que se arma
 solo al cargar, y detrás de él cinco rincones con cartas, recuerdos y cajitas.
+Todo con pinta de fanzine: azul de fotocopia, papeles recortados y pegados,
+sombras duras y letra de cartel.
 No hay librerías, no hay build, no hay servidor. Son cuatro archivos y un HTML.
 
 ## Cómo verlo
@@ -20,7 +22,7 @@ python3 -m http.server 8000
 ```
 index.html        estructura de las seis pantallas
 css/styles.css    todo el estilo y las animaciones
-js/particles.js   el lienzo de fondo: estrellas, motas y pétalos
+js/backdrop.js    el muro de palabras del fondo, una por pantalla
 js/bouquet.js     construye el ramo en SVG, flor por flor
 js/intro.js       la coreografía de entrada y la navegación
 js/sections.js    el contenido de cada rincón
@@ -80,9 +82,13 @@ git config core.hooksPath .githooks
   (`mulberry32`), así que las imperfecciones dibujadas a mano son las mismas
   en cada carga —y en cualquier aparato: lo que el modo ligero se salta se
   calcula igualmente, solo que no se dibuja, para no mover la semilla.
-- **Se respeta `prefers-reduced-motion`.** Con esa preferencia activa se
-  quitan los pétalos y las motas, las estrellas dejan de titilar y la intro
-  salta directa al final.
+- **El fondo es un muro de palabras.** `backdrop.js` llena la pantalla de
+  filas con la misma palabra —unas macizas, otras solo de contorno— y la
+  cambia en cada pantalla (`WORDS`, al principio del archivo). Es texto
+  quieto: se monta al entrar y no vuelve a costar nada.
+- **Se respeta `prefers-reduced-motion`.** Con esa preferencia activa las
+  letras del título y las tarjetas aparecen sin rebote, los sellos dejan de
+  moverse y la intro salta directa al final.
 - **En el teléfono se enciende el modo ligero.** Un script al principio de
   `index.html` decide si el aparato es modesto (pantalla pequeña con dedo,
   poca memoria o pocos núcleos), pone `window.LITE` y la clase `lite` en
@@ -109,10 +115,8 @@ git config core.hooksPath .githooks
     unas 133 animaciones eternas repintando el SVG entero a 60 fps), se mece
     el ramo completo con un solo `transform`, que la tarjeta gráfica ya tiene
     guardado. Empieza cuando la entrada termina, con la clase `is-settled`;
-  - el grano se queda quieto, y se van los `backdrop-filter` y el desenfoque
-    al cambiar de pantalla;
-  - el lienzo del fondo dibuja las estrellas una sola vez y luego las copia,
-    usa sellos en vez de crear degradados, y va a ~30 fps.
+  - el fanzine de por sí es barato: el muro es texto quieto, la trama de
+    fotocopia es un fondo fijo y las sombras son duras, sin desenfoque.
 
   En escritorio no cambia nada: el vaivén sigue siendo pieza por pieza.
 
@@ -124,6 +128,6 @@ git config core.hooksPath .githooks
 - **Teclado:** `Esc` vuelve al ramo desde cualquier pantalla. Las flores y las
   cajitas son `<button>`, y las estrellas del cielo llevan `tabindex` y su
   propio manejo de `Enter` / espacio.
-- **Sin dependencias** salvo las tipografías de Google Fonts (Caveat,
-  Patrick Hand, Gloria Hallelujah). Sin ellas el sitio funciona igual, solo
-  cambia la letra.
+- **Sin dependencias** salvo las tipografías de Google Fonts (Anton para
+  los carteles, Permanent Marker para lo escrito a rotulador y Space Grotesk
+  para leer). Sin ellas el sitio funciona igual, solo cambia la letra.

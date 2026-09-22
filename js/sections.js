@@ -263,7 +263,7 @@
           'Y todavía me parece increíble.'
         ],
         strong: [3],
-        lid: '#c9628e', base: '#ac5077', ribbon: '#bfe0a8'
+        lid: '#ec3b26', base: '#c42c1a', ribbon: '#ffd21e'
       },
       {
         label: 'Una cosa que guardo',
@@ -274,7 +274,7 @@
           'Creo que ahí es donde más se nota cuánto te quiero:\nen todas esas cosas que guardo sin que tú siquiera sepas que las guardé.'
         ],
         strong: [3],
-        lid: '#4f7d52', base: '#3f6644', ribbon: '#ffc2da'
+        lid: '#4453ea', base: '#2e39ba', ribbon: '#ff78b9'
       },
       {
         label: 'Si alguna vez lo dudas',
@@ -287,7 +287,7 @@
           'De verdad.\nCon todo lo que soy ahora.'
         ],
         strong: [4],
-        lid: '#b04f77', base: '#963f64', ribbon: '#d7ecc4'
+        lid: '#ff78b9', base: '#d9569a', ribbon: '#101014'
       }
     ];
 
